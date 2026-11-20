@@ -329,7 +329,6 @@ function loadSettingsForm(settings) {
   set("proxy.max_fails", settings.proxy.max_fails);
   set("proxy.fail_timeout", settings.proxy.fail_timeout);
   set("proxy.connect_timeout", settings.proxy.connect_timeout);
-  set("proxy.allowed_ips", settings.proxy.allowed_ips);
   set("probe.enabled", settings.probe.enabled);
   set("probe.interval", settings.probe.interval);
   set("probe.target", settings.probe.target);
@@ -358,7 +357,6 @@ async function saveSettings(event) {
       max_fails: Number(getField("proxy.max_fails").value),
       fail_timeout: Number(getField("proxy.fail_timeout").value),
       connect_timeout: Number(getField("proxy.connect_timeout").value),
-      allowed_ips: getField("proxy.allowed_ips").value.trim(),
     },
     probe: {
       enabled: getField("probe.enabled").checked,
