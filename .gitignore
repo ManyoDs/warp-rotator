@@ -1,0 +1,29 @@
+# Local secrets and runtime state
+pool.ini
+configs/*
+configs/**
+!configs/.gitkeep
+run/
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# Python/build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/

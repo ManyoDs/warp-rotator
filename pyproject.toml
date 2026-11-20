@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "warp-rotator"
+version = "0.1.0"
+description = "WARP Rotator: multi-WireGuard HTTP proxy pool with a web interface"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+wgpool = "wgpool.cli:main"
+
+[tool.setuptools]
+packages = ["wgpool"]
+
+[tool.setuptools.package-data]
+wgpool = ["web/*"]

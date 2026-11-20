@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WARP Rotator</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="loginView" class="login-wrap">
+    <form id="loginForm" class="card login">
+      <h1>WARP Rotator</h1>
+      <p class="muted">Masuk untuk mengelola pool tunnel WireGuard</p>
+      <label>Username
+        <input id="loginUser" value="admin" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input id="loginPass" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="primary" type="submit">Masuk</button>
+      <div id="loginError" class="error"></div>
+    </form>
+  </div>
+
+  <div id="appView" hidden>
+    <header>
+      <div class="brand"><strong>WARP Rotator</strong> <span id="version" class="muted"></span></div>
+      <div class="row">
+        <span id="proxyInfo" class="pill">-</span>
+        <button id="btnLogout" class="ghost" type="button">Keluar</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="section-head">
+          <h2>Tunnel</h2>
+          <div class="row">
+            <button id="btnTest" class="ghost" type="button">Test egress</button>
+            <button id="btnRestartAll" class="ghost" type="button">Restart All</button>
+            <button id="btnAdd" class="primary" type="button">+ Tambah config</button>
+          </div>
+        </div>
+        <div id="tunnelList" class="tunnels">
+          <p class="muted">Memuat...</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Pengaturan</h2>
+        <form id="settingsForm" class="grid">
+          <fieldset>
+            <legend>Proxy</legend>
+            <label>Bind <input name="proxy.bind"></label>
+            <label>Port <input name="proxy.port" type="number" min="1" max="65535"></label>
+            <label>Strategi
+              <select name="proxy.strategy">
+                <option value="round">round-robin</option>
+                <option value="rand">random</option>
+              </select>
+            </label>
+            <label>Max fails <input name="proxy.max_fails" type="number" min="1"></label>
+            <label>Fail timeout (detik) <input name="proxy.fail_timeout" type="number" min="1"></label>
+            <label>Connect timeout (detik) <input name="proxy.connect_timeout" type="number" step="0.5" min="0.5"></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Health probe</legend>
+            <label class="check"><input name="probe.enabled" type="checkbox"> Aktif</label>
+            <label>Interval (detik) <input name="probe.interval" type="number" min="1"></label>
+            <label>Target URL <input name="probe.target" placeholder="https://api64.ipify.org/"></label>
+            <label>Timeout (detik) <input name="probe.timeout" type="number" step="0.5" min="0.5"></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Auto rotate</legend>
+            <label class="wide">Restart tunnel tiap berapa menit? (0 = nonaktif)
+              <input name="rotation.interval_minutes" type="number" step="0.1" min="0" max="10080" placeholder="0">
+            </label>
+            <p class="muted wide">Tunnel direstart bergantian. Provider bisa saja memberi IP yang sama lagi.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>Exit IP global</legend>
+            <label class="ipv6-toggle wide" title="ON: IPv6-only di semua tunnel. OFF: AllowedIPs dari setiap config.">
+              <span>IPv6-only untuk semua tunnel</span>
+              <input name="exit.ipv6_only" type="checkbox">
+              <span class="toggle-track" aria-hidden="true"></span>
+            </label>
+            <p class="muted wide">Berlaku langsung. ON memakai AllowedIPs = ::/0. OFF mengembalikan AllowedIPs asli. Semua tunnel direstart bergantian.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>WireGuard</legend>
+            <label>Binary wireproxy <input name="wireproxy.binary"></label>
+            <label>Base SOCKS port <input name="wireproxy.base_socks_port" type="number" min="1" max="65000"></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Web UI</legend>
+            <label>Bind <input name="web.bind"></label>
+            <label>Port <input name="web.port" type="number" min="1" max="65535"></label>
+            <label>Username <input name="web.username"></label>
+            <label>Password baru (opsional) <input name="new_password" type="password" autocomplete="new-password" placeholder="min. 6 karakter"></label>
+            <label>TLS cert path (opsional) <input name="web.tls_cert" placeholder="/etc/ssl/certs/wgpool.pem"></label>
+            <label>TLS key path (opsional) <input name="web.tls_key" placeholder="/etc/ssl/private/wgpool.key"></label>
+          </fieldset>
+
+          <div class="wide row end">
+            <button class="primary" type="submit">Simpan pengaturan</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="configDialog">
+    <form method="dialog" id="configForm" class="dialog-body">
+      <h2 id="configTitle">Tambah config</h2>
+      <label>Nama file
+        <input id="configName" placeholder="vpn-jepang.conf" required>
+      </label>
+      <label>Upload file .conf (opsional)
+        <input id="configFile" type="file" accept=".conf,text/plain">
+      </label>
+      <label>Isi WireGuard config
+        <textarea id="configText" spellcheck="false" placeholder="[Interface]&#10;PrivateKey = ...&#10;Address = ...&#10;&#10;[Peer]&#10;PublicKey = ...&#10;Endpoint = ...&#10;AllowedIPs = 0.0.0.0/0"></textarea>
+      </label>
+      <div id="configError" class="error"></div>
+      <div class="row end">
+        <button type="button" class="ghost" id="configCancel">Batal</button>
+        <button type="button" class="primary" id="configSave">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="logsDialog">
+    <div class="dialog-body">
+      <div class="section-head">
+        <h2 id="logsTitle">Log</h2>
+        <div class="row">
+          <button type="button" class="ghost" id="logsRefresh">Refresh</button>
+          <button type="button" class="ghost" id="logsClose">Tutup</button>
+        </div>
+      </div>
+      <pre id="logsBody" class="logs"></pre>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>

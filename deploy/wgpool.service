@@ -1,0 +1,23 @@
+[Unit]
+Description=wgpool - multi-WireGuard HTTP proxy pool
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/warp-rotator
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m wgpool start -c /opt/warp-rotator/pool.ini
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/warp-rotator
+UMask=0077
+User=warp-rotator
+Group=warp-rotator
+
+[Install]
+WantedBy=multi-user.target
