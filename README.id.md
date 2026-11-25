@@ -63,6 +63,7 @@ Gunakan `-c /path/to/pool.ini` untuk memilih config aplikasi lain.
 ## Pengaturan dashboard
 
 - **Strategy:** `round` bergiliran memakai tunnel aktif pada setiap koneksi proxy baru; `random` memilih tunnel secara acak.
+- **Autentikasi proxy:** opsional mewajibkan HTTP Basic Auth. Aktifkan toggle, isi username dan password baru. Client memakai `http://USERNAME:PASSWORD@HOST:8080`. Basic Auth bukan enkripsi; gunakan TLS atau jaringan privat tepercaya.
 - **IPv6-only:** toggle global. ON menghasilkan `AllowedIPs = ::/0`; OFF mengembalikan `AllowedIPs` dari config sumber. Mode otomatis mendukung satu section `[Peer]` per config.
 - **Auto rotate:** interval restart dalam menit; `0` berarti nonaktif. Restart tidak menjamin provider memberikan IP berbeda.
 - **Restart All:** restart semua tunnel aktif secara bergiliran.
@@ -87,7 +88,7 @@ sudo -u warp-rotator python3 -m wgpool init
 sudo -u warp-rotator python3 -m wgpool passwd
 ```
 
-Edit `/opt/warp-rotator/pool.ini` bila perlu. Default listener hanya bind ke localhost. Untuk akses jaringan, bind hanya ke interface privat/Tailscale dan atur firewall. **HTTP proxy tidak memiliki autentikasi client; jangan expose ke Internet publik.**
+Edit `/opt/warp-rotator/pool.ini` bila perlu. Default listener hanya bind ke localhost. Untuk akses jaringan, bind hanya ke interface privat/Tailscale dan atur firewall. Basic Auth proxy bisa diaktifkan dari dashboard, tetapi tidak mengenkripsi traffic; gunakan TLS/jaringan privat bila diakses dari luar localhost.
 
 Pasang dan jalankan service:
 
@@ -115,5 +116,5 @@ Test menggunakan mock SOCKS5 lokal dan tidak memerlukan endpoint VPN aktif.
 - `pool.ini`, config WireGuard/private key, log, PID, dan config generated tidak disertakan di Git.
 - Password dashboard di-hash dengan scrypt.
 - Dashboard default bind ke localhost; gunakan TLS atau SSH tunnel untuk akses remote.
-- Proxy default bind ke localhost dan tidak punya autentikasi client.
+- Proxy default bind ke localhost; Basic Auth client tersedia opsional. Gunakan TLS/jaringan privat di luar localhost.
 - IPv6-only mengubah routing pada config generated. Ketersediaan IPv6 dan rotasi IP bergantung pada provider VPN.

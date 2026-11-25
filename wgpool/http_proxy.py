@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
+import hmac
 import logging
 from typing import List, Optional, Tuple
 from urllib.parse import urlsplit
 
 from . import socks5
+from .config import verify_password
 from .pool import Pool, Upstream
 from .util import format_host_port, parse_host_port
 
@@ -147,6 +151,15 @@ class HttpProxyServer:
             await self._send_error(writer, 400, str(exc))
             return
 
+        if self.pool.proxy.auth_enabled and not self._proxy_auth_valid(headers):
+            await self._send_error(
+                writer,
+                407,
+                "autentikasi proxy diperlukan",
+                extra_headers=[("Proxy-Authenticate", 'Basic realm="WARP Rotator"')],
+            )
+            return
+
         try:
             if method.upper() == "CONNECT":
                 await self._handle_connect(reader, writer, target)
@@ -186,6 +199,24 @@ class HttpProxyServer:
         raise HttpProxyError(
             "semua tunnel gagal: %s" % last_error if last_error else "tidak ada tunnel aktif"
         )
+
+    def _proxy_auth_valid(self, headers: List[Tuple[str, str]]) -> bool:
+        value = header_get(headers, "proxy-authorization") or ""
+        scheme, _, token = value.partition(" ")
+        if scheme.lower() != "basic" or not token:
+            return False
+        try:
+            decoded = base64.b64decode(token, validate=True).decode("utf-8")
+            username, separator, password = decoded.partition(":")
+        except (binascii.Error, UnicodeDecodeError, ValueError):
+            return False
+        if not separator:
+            return False
+        username_ok = hmac.compare_digest(
+            username.encode("utf-8"), self.pool.proxy.auth_username.encode("utf-8")
+        )
+        password_ok = verify_password(self.pool.proxy.auth_password_hash, password)
+        return username_ok and password_ok
 
     async def _handle_connect(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, target: str
@@ -263,17 +294,25 @@ class HttpProxyServer:
             await socks5.close_writer(up_writer)
             await self._close(writer)
 
-    async def _send_error(self, writer: asyncio.StreamWriter, status: int, message: str) -> None:
-        reason = {400: "Bad Request", 403: "Forbidden", 502: "Bad Gateway", 500: "Internal Server Error"}.get(
+    async def _send_error(
+        self,
+        writer: asyncio.StreamWriter,
+        status: int,
+        message: str,
+        extra_headers: Optional[List[Tuple[str, str]]] = None,
+    ) -> None:
+        reason = {400: "Bad Request", 403: "Forbidden", 407: "Proxy Authentication Required", 502: "Bad Gateway", 500: "Internal Server Error"}.get(
             status, "Error"
         )
         body = message.encode("utf-8")
+        extra = "".join("%s: %s\r\n" % pair for pair in (extra_headers or []))
         head = (
             "HTTP/1.1 %d %s\r\n"
             "Content-Type: text/plain; charset=utf-8\r\n"
             "Content-Length: %d\r\n"
-            "Connection: close\r\n\r\n"
-        ) % (status, reason, len(body))
+            "Connection: close\r\n"
+            "%s\r\n"
+        ) % (status, reason, len(body), extra)
         try:
             writer.write(head.encode("latin-1") + body)
             await writer.drain()

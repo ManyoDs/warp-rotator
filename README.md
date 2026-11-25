@@ -63,6 +63,7 @@ Use `-c /path/to/pool.ini` to select another app config.
 ## Dashboard settings
 
 - **Strategy:** `round` rotates across active tunnels for each new proxy connection; `random` selects one randomly.
+- **Proxy authentication:** optionally require HTTP Basic Auth. Enable the toggle, set a username, and enter a new password. Clients use `http://USERNAME:PASSWORD@HOST:8080`. Basic Auth is not encryption; use TLS or a trusted private network.
 - **IPv6-only:** global toggle. ON generates `AllowedIPs = ::/0`; OFF restores `AllowedIPs` from each source config. Automatic mode supports one `[Peer]` section per config.
 - **Auto rotate:** restart interval in minutes; `0` disables it. A restart does not guarantee that the VPN provider assigns a different IP.
 - **Restart All:** restart active tunnels in sequence.
@@ -87,7 +88,7 @@ sudo -u warp-rotator python3 -m wgpool init
 sudo -u warp-rotator python3 -m wgpool passwd
 ```
 
-Edit `/opt/warp-rotator/pool.ini` if needed. Default listeners bind to localhost. For network access, bind only to a private/Tailscale interface and configure the firewall. **The HTTP proxy has no client authentication; do not expose it to the public Internet.**
+Edit `/opt/warp-rotator/pool.ini` if needed. Default listeners bind to localhost. For network access, bind only to a private/Tailscale interface and configure the firewall. Proxy Basic Auth is optional and does not encrypt traffic; use TLS/private networking when exposing the proxy outside localhost.
 
 Install and start the service:
 
@@ -115,5 +116,5 @@ Tests use local mock SOCKS5 servers and do not require a live VPN endpoint.
 - `pool.ini`, WireGuard configs/private keys, logs, PID files, and generated configs are excluded from Git.
 - Dashboard passwords are hashed with scrypt.
 - The dashboard binds to localhost by default; use TLS or an SSH tunnel for remote access.
-- The proxy binds to localhost by default and has no client authentication.
+- The proxy binds to localhost by default; optional Basic Auth can protect proxy clients. Use TLS/private networking beyond localhost.
 - IPv6-only changes routing in generated configs. IPv6 availability and IP rotation depend on the VPN provider.

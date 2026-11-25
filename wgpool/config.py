@@ -23,6 +23,9 @@ max_fails = 3
 fail_timeout = 60
 connect_timeout = 25
 allowed_ips =
+auth_enabled = false
+auth_username =
+auth_password_hash =
 
 [probe]
 enabled = true
@@ -114,6 +117,9 @@ class ProxySettings:
     fail_timeout: int = 60
     connect_timeout: float = 25.0
     allowed_ips: str = ""
+    auth_enabled: bool = False
+    auth_username: str = ""
+    auth_password_hash: str = ""
 
 
 @dataclass
@@ -218,6 +224,11 @@ class AppConfig:
             raise ValueError("fail_timeout minimal 1")
         if self.proxy.connect_timeout <= 0:
             raise ValueError("connect_timeout harus > 0")
+        if self.proxy.auth_enabled:
+            if not self.proxy.auth_username.strip():
+                raise ValueError("username proxy wajib diisi saat autentikasi aktif")
+            if not self.proxy.auth_password_hash:
+                raise ValueError("password proxy wajib diatur sebelum autentikasi diaktifkan")
         if self.probe.interval < 1:
             raise ValueError("interval probe minimal 1")
         if self.rotation.interval_minutes < 0 or self.rotation.interval_minutes > 10080:
@@ -292,6 +303,9 @@ def load_config(path: str, validate: bool = True) -> AppConfig:
             fail_timeout=_get_int(parser, "proxy", "fail_timeout", 60),
             connect_timeout=_get_float(parser, "proxy", "connect_timeout", 25.0),
             allowed_ips=_get(parser, "proxy", "allowed_ips", ""),
+            auth_enabled=_get_bool(parser, "proxy", "auth_enabled", False),
+            auth_username=_get(parser, "proxy", "auth_username", ""),
+            auth_password_hash=_get(parser, "proxy", "auth_password_hash", ""),
         ),
         probe=ProbeSettings(
             enabled=_get_bool(parser, "probe", "enabled", True),
@@ -343,6 +357,9 @@ def save_config(cfg: AppConfig, password_hash: Optional[str] = None) -> None:
         "fail_timeout = %d" % cfg.proxy.fail_timeout,
         "connect_timeout = %g" % cfg.proxy.connect_timeout,
         "allowed_ips = %s" % cfg.proxy.allowed_ips,
+        "auth_enabled = %s" % ("true" if cfg.proxy.auth_enabled else "false"),
+        "auth_username = %s" % cfg.proxy.auth_username,
+        "auth_password_hash = %s" % cfg.proxy.auth_password_hash,
         "",
         "[probe]",
         "enabled = %s" % ("true" if cfg.probe.enabled else "false"),

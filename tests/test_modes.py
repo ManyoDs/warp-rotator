@@ -10,6 +10,22 @@ from wgpool.pool import Upstream
 
 
 class GlobalExitModeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_proxy_auth_can_be_enabled_with_password_via_settings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = AppConfig(path=os.path.join(tmp, "pool.ini"))
+            cfg.web.bind = "127.0.0.1"
+            manager = Manager(cfg)
+            result = await manager.apply_settings({
+                "proxy": {
+                    "auth_enabled": True,
+                    "auth_username": "client",
+                    "new_password": "client-pass-123",
+                }
+            })
+            self.assertTrue(result["proxy"]["auth_enabled"])
+            self.assertTrue(result["proxy"]["auth_password_set"])
+            self.assertTrue(cfg.proxy.auth_password_hash.startswith("scrypt$"))
+
     async def test_global_ipv6_toggle_persists_and_restarts_all_tunnels(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = AppConfig(path=os.path.join(tmp, "pool.ini"))

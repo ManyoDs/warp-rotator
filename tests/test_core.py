@@ -76,6 +76,19 @@ class ConfigTextTests(unittest.TestCase):
             loaded = load_config(path, validate=False)
             self.assertTrue(loaded.exit.ipv6_only)
 
+    def test_proxy_auth_settings_persist_password_hash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "pool.ini")
+            cfg = load_config(path, validate=False)
+            cfg.proxy.auth_enabled = True
+            cfg.proxy.auth_username = "client"
+            cfg.proxy.auth_password_hash = hash_password("long-password")
+            save_config(cfg)
+            loaded = load_config(path, validate=True)
+            self.assertTrue(loaded.proxy.auth_enabled)
+            self.assertEqual(loaded.proxy.auth_username, "client")
+            self.assertTrue(verify_password(loaded.proxy.auth_password_hash, "long-password"))
+
     def test_sanitize_names(self):
         self.assertEqual(sanitize_config_name("vpn1"), "vpn1.conf")
         self.assertIsNone(sanitize_config_name("dir/vpn2.conf"))

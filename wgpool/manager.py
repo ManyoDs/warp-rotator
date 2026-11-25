@@ -199,6 +199,9 @@ class Manager:
                 "fail_timeout": cfg.proxy.fail_timeout,
                 "connect_timeout": cfg.proxy.connect_timeout,
                 "allowed_ips": cfg.proxy.allowed_ips,
+                "auth_enabled": cfg.proxy.auth_enabled,
+                "auth_username": cfg.proxy.auth_username,
+                "auth_password_set": bool(cfg.proxy.auth_password_hash),
             },
             "probe": {
                 "enabled": cfg.probe.enabled,
@@ -388,6 +391,12 @@ class Manager:
         old_hash = self.cfg.web.password_hash
         try:
             self._apply_settings_values(data)
+            proxy_payload = data.get("proxy") or {}
+            new_proxy_password = str(proxy_payload.get("new_password") or "")
+            if new_proxy_password:
+                if len(new_proxy_password) < 8:
+                    raise ValueError("password proxy minimal 8 karakter")
+                self.cfg.proxy.auth_password_hash = hash_password(new_proxy_password)
             if self.cfg.exit.ipv6_only and not old[4].ipv6_only:
                 for name in self.supervisor.config_files():
                     normalize_wg_text(self.supervisor.read_config(name), "ipv6")
@@ -479,6 +488,13 @@ class Manager:
             self.cfg.proxy.connect_timeout = _as_float(proxy["connect_timeout"], self.cfg.proxy.connect_timeout)
         if "allowed_ips" in proxy:
             self.cfg.proxy.allowed_ips = str(proxy["allowed_ips"]).strip()
+        if "auth_enabled" in proxy:
+            self.cfg.proxy.auth_enabled = _as_bool(proxy["auth_enabled"], self.cfg.proxy.auth_enabled)
+        if "auth_username" in proxy:
+            username = str(proxy["auth_username"])
+            if any(char in username for char in "\r\n:"):
+                raise ValueError("username proxy tidak boleh berisi titik dua atau baris baru")
+            self.cfg.proxy.auth_username = username.strip()
 
         if "enabled" in probe:
             self.cfg.probe.enabled = _as_bool(probe["enabled"], self.cfg.probe.enabled)

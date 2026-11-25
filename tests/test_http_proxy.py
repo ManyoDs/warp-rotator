@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import socket
 import unittest
 
 from tests.fake_socks5 import FakeSocks5, TargetServer
-from wgpool.config import ProbeSettings, ProxySettings
+from wgpool.config import ProbeSettings, ProxySettings, hash_password
 from wgpool.http_proxy import HttpProxyServer
 from wgpool.pool import Pool, Upstream
 from wgpool.socks5 import http_get_via_socks5
@@ -111,6 +112,52 @@ class HttpProxyTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(b"403", data)
         self.assertEqual(self.socks_a.connections, 0)
         writer.close()
+
+    async def test_proxy_basic_auth_requires_valid_credentials(self):
+        proxy_settings = ProxySettings(
+            strategy="round",
+            auth_enabled=True,
+            auth_username="proxy-user",
+            auth_password_hash=hash_password("proxy-pass-123"),
+        )
+        pool = Pool(proxy_settings, ProbeSettings(enabled=False))
+        pool.add(Upstream(name="u0", socks_port=self.port_a, state="running"))
+        server = await self.start_proxy(pool)
+
+        missing = await self.http_get(server.port)
+        self.assertIn(b"407 Proxy Authentication Required", missing)
+        self.assertIn(b'Proxy-Authenticate: Basic realm="WARP Rotator"', missing)
+        self.assertEqual(self.socks_a.connections, 0)
+
+        reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
+        bad_token = base64.b64encode(b"proxy-user:wrong-password").decode("ascii")
+        bad_request = (
+            "GET http://127.0.0.1:%d/ HTTP/1.1\r\n"
+            "Host: 127.0.0.1:%d\r\n"
+            "Proxy-Authorization: Basic %s\r\n\r\n"
+            % (self.target_port, self.target_port, bad_token)
+        )
+        writer.write(bad_request.encode())
+        await writer.drain()
+        bad_response = await asyncio.wait_for(reader.read(), timeout=5)
+        writer.close()
+        self.assertIn(b"407 Proxy Authentication Required", bad_response)
+        self.assertEqual(self.socks_a.connections, 0)
+
+        reader, writer = await asyncio.open_connection("127.0.0.1", server.port)
+        token = base64.b64encode(b"proxy-user:proxy-pass-123").decode("ascii")
+        request = (
+            "GET http://127.0.0.1:%d/ HTTP/1.1\r\n"
+            "Host: 127.0.0.1:%d\r\n"
+            "Proxy-Authorization: Basic %s\r\n\r\n"
+            % (self.target_port, self.target_port, token)
+        )
+        writer.write(request.encode())
+        await writer.drain()
+        response = await asyncio.wait_for(reader.read(), timeout=5)
+        writer.close()
+        self.assertIn(b"hello-wgpool", response)
+        self.assertEqual(self.socks_a.connections, 1)
 
     async def test_http_probe_helper_returns_status_and_body(self):
         status, body = await http_get_via_socks5(

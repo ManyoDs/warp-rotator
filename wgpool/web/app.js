@@ -329,6 +329,12 @@ function loadSettingsForm(settings) {
   set("proxy.max_fails", settings.proxy.max_fails);
   set("proxy.fail_timeout", settings.proxy.fail_timeout);
   set("proxy.connect_timeout", settings.proxy.connect_timeout);
+  set("proxy.auth_enabled", settings.proxy.auth_enabled);
+  set("proxy.auth_username", settings.proxy.auth_username);
+  set("proxy.new_password", "");
+  getField("proxy.new_password").placeholder = settings.proxy.auth_password_set
+    ? "tersimpan; kosongkan untuk mempertahankan"
+    : "min. 8 karakter";
   set("probe.enabled", settings.probe.enabled);
   set("probe.interval", settings.probe.interval);
   set("probe.target", settings.probe.target);
@@ -357,6 +363,8 @@ async function saveSettings(event) {
       max_fails: Number(getField("proxy.max_fails").value),
       fail_timeout: Number(getField("proxy.fail_timeout").value),
       connect_timeout: Number(getField("proxy.connect_timeout").value),
+      auth_enabled: getField("proxy.auth_enabled").checked,
+      auth_username: getField("proxy.auth_username").value.trim(),
     },
     probe: {
       enabled: getField("probe.enabled").checked,
@@ -384,6 +392,8 @@ async function saveSettings(event) {
   };
   const password = getField("new_password").value;
   if (password) payload.new_password = password;
+  const proxyPassword = getField("proxy.new_password").value;
+  if (proxyPassword) payload.proxy.new_password = proxyPassword;
 
   const before = lastStatus ? lastStatus.web : null;
   const webChanged = before && (
@@ -397,6 +407,7 @@ async function saveSettings(event) {
       ? "Pengaturan disimpan. Web UI pindah ke " + payload.web.bind + ":" + payload.web.port
       : "Pengaturan disimpan");
     getField("new_password").value = "";
+    getField("proxy.new_password").value = "";
     await refresh();
   } catch (err) {
     toast(err.message, true);
